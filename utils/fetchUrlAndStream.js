@@ -3,7 +3,7 @@ const path = require("path");
 // const events = require("events");
 
 // const emitter = new events.EventEmitter();
-async function fetchUrlAndStream(url, callback) {
+async function fetchUrlAndStream(url, res, callback) {
   try {
     const response = await fetch(url);
     if (!response.ok) {
@@ -18,19 +18,19 @@ async function fetchUrlAndStream(url, callback) {
     // let lastPercent = 0;
 
     const reader = response.body.getReader();
+    const contentLength = response.headers.get("Content-Length");
     // const chunks = [];
 
     // console.log("downloading....");
-
+    res.setHeader("Content-Length", contentLength);
     while (true) {
-      const { value, done } = await reader.read();
+      const { value } = await reader.read();
       if (value) {
         callback(Buffer.from(value));
       } else {
         callback(undefined);
+        break;
       }
-
-      if (done) break;
 
       //   chunks.push(value);
       //   receivedLength += value.length;

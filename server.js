@@ -120,13 +120,11 @@ app.get("/stream", async (req, res, next) => {
       return next(error); // Use return to exit the handler
     }
     res.setHeader("Content-Type", "video/mp4");
-    await fetchUrlAndStream(url, (value) => {
+
+    await fetchUrlAndStream(url, res, (value) => {
       if (value) {
         res.write(value);
       } else {
-        // const numberArray = value.split(",").map(Number);
-        // const restoredUint8Array = new Uint8Array(numberArray);
-        console.log("complete!");
         res.end();
       }
     });
