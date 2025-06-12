@@ -4,6 +4,7 @@ const fs = require("fs");
 const fetchStreamAndDownload = require("./utils/fetchStreamAndDownload.js");
 const readFileStream = require("./utils/readFileStream.js");
 const fetchUrlAndStream = require("./utils/fetchUrlAndStream.js");
+const fetchUrlAndStreamWithRange = require("./utils/fetchUrlAndStreamWithRange.js");
 
 // const database = require("./utils/Database.js");
 
@@ -111,39 +112,43 @@ app.get("/download", async (req, res, next) => {
   }
 });
 
+// "Access-Control-Allow-Origin": "*", // CORS header
+
 app.get("/stream", async (req, res, next) => {
   try {
     const url = req.query.url;
+
     if (!url) {
       const error = new Error("Url missing");
       error.statusCode = 400;
       return next(error); // Use return to exit the handler
     }
-    res.setHeader("Content-Type", "video/mp4");
+    // await fetchUrlAndStream(url, res, range);
 
     await fetchUrlAndStream(url, res, (value) => {
       if (value) {
+        console.log("runiii");
         res.write(value);
       } else {
+        console.log("End");
         res.end();
       }
     });
   } catch (error) {
-    console.log(error.message);
+    console.log(error);
     next(error);
   }
 });
 
-app.use((error, req, res, next) => {
-  const statusCode = error.statusCode || 500;
-  const status =
-    error.statusCode >= 400 && error.statusCode < 500 ? "fail" : "error";
-  res.status(statusCode).json({
-    status: status,
-    message: error.message,
-  });
+app.get("/range-stream", async (req, res, next) => {
+  const url = req.query.url;
+  if (!url) {
+    return res.status(400).send("Missing video URL.");
+  }
+
+  await fetchUrlAndStreamWithRange(url, req, res);
 });
 
 app.listen("5000", () => {
-  console.log("Server is running on port 5000");
+  console.log("server is running on port 5000");
 });

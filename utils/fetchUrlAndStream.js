@@ -1,57 +1,31 @@
-const fs = require("fs"); // Use promises API for fs
-const path = require("path");
-// const events = require("events");
-
-// const emitter = new events.EventEmitter();
 async function fetchUrlAndStream(url, res, callback) {
   try {
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(
-        `Network Error: \/${response.status} \/${response.statusText}`
+        `Network Error: ${response.status} ${response.statusText}`
       );
     }
 
-    // const contentLength = response.headers.get("content-length");
-    // const totalLength = contentLength ? parseInt(contentLength, 10) : null;
-    // let receivedLength = 0;
-    // let lastPercent = 0;
+    const contentLength = response.headers.get("Content-Length");
+    res.setHeader("Content-Type", "video/mp4");
+    if (contentLength) {
+      res.setHeader("Content-Length", contentLength);
+    }
 
     const reader = response.body.getReader();
-    const contentLength = response.headers.get("Content-Length");
-    // const chunks = [];
 
-    // console.log("downloading....");
-    res.setHeader("Content-Length", contentLength);
     while (true) {
-      const { value } = await reader.read();
-      if (value) {
-        callback(Buffer.from(value));
-      } else {
+      const { done, value } = await reader.read();
+      if (done) {
         callback(undefined);
         break;
       }
-
-      //   chunks.push(value);
-      //   receivedLength += value.length;
-
-      //   if (totalLength) {
-      //     const percent = ((receivedLength / totalLength) * 100).toFixed(2);
-      //     if (percent - lastPercent >= 1) {
-      //       lastPercent = percent;
-      //       callback(percent);
-      //     }
-      //   }
+      callback(Buffer.from(value));
     }
-
-    // const result = Buffer.concat(chunks); // Use Buffer.concat to combine chunks
-
-    // fs.writeFile(outputPath, result, (error) => {
-    //   if (!error) callback(100);
-    // });
   } catch (error) {
-    console.error(error.message);
-    throw new Error(error.message);
+    console.error("Fetch Stream Error:", error.message);
+    res.status(500).end("Failed to stream video.");
   }
 }
 
