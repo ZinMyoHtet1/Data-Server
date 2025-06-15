@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Modern File Upload</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap");
+
+      :root {
+        --color-bg: #121212;
+        --color-bg-surface: rgba(30, 30, 30, 0.85);
+        --color-accent-start: #8b5cf6;
+        --color-accent-end: #06b6d4;
+        --color-text-primary: #ffffff;
+        --color-text-secondary: #cdd6f4;
+        --color-error: #f87171;
+        --color-success: #4ade80;
+        --spacing-sm: 12px;
+        --spacing-md: 24px;
+        --spacing-lg: 48px;
+        --border-radius: 12px;
+        --focus-outline: 3px solid #8b5cf6;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Inter", sans-serif;
+        background: linear-gradient(
+          135deg,
+          var(--color-accent-start),
+          var(--color-accent-end)
+        );
+        color: var(--color-text-primary);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: var(--spacing-lg);
+      }
+
+      main {
+        background: var(--color-bg-surface);
+        padding: var(--spacing-lg);
+        border-radius: var(--border-radius);
+        max-width: 400px;
+        width: 100%;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-md);
+      }
+
+      h1 {
+        font-weight: 800;
+        font-size: 2rem;
+        margin: 0 0 var(--spacing-md) 0;
+        text-align: center;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+      }
+
+      label {
+        font-weight: 600;
+        margin-bottom: var(--spacing-sm);
+        display: block;
+      }
+
+      input[type="file"],
+      input[type="text"] {
+        width: 100%;
+        padding: var(--spacing-sm);
+        border-radius: var(--border-radius);
+        border: 2px solid transparent;
+        background-color: #222;
+        color: var(--color-text-secondary);
+        cursor: pointer;
+        transition: border-color 0.3s ease;
+        margin-bottom: 8px;
+      }
+
+      input[type="file"]:focus-visible,
+      input[type="text"]:focus-visible {
+        outline: none;
+        border-color: var(--color-accent-start);
+        box-shadow: 0 0 6px var(--color-accent-start);
+      }
+
+      button[type="submit"] {
+        background: linear-gradient(
+          135deg,
+          var(--color-accent-start),
+          var(--color-accent-end)
+        );
+        border: none;
+        padding: 16px;
+        border-radius: var(--border-radius);
+        color: var(--color-text-primary);
+        font-weight: 700;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        user-select: none;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      }
+
+      button[type="submit"]:hover,
+      button[type="submit"]:focus-visible {
+        transform: scale(1.05);
+        box-shadow: 0 10px 30px rgba(139, 92, 246, 0.6);
+        outline: none;
+      }
+
+      button[type="submit"]:disabled {
+        background: #555;
+        cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
+      }
+
+      .status {
+        font-size: 0.9rem;
+        min-height: 1.4rem;
+        padding: var(--spacing-sm);
+        border-radius: var(--border-radius);
+        text-align: center;
+      }
+
+      .status.error {
+        color: var(--color-error);
+      }
+
+      .status.success {
+        color: var(--color-success);
+      }
+
+      /* Responsive */
+      @media (max-width: 480px) {
+        main {
+          max-width: 100%;
+          padding: var(--spacing-md);
+        }
+        h1 {
+          font-size: 1.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Upload a File to Server</h1>
+      <form id="uploadForm" aria-label="File upload form">
+        <label for="fileInput">Choose a file to upload</label>
+        <input
+          type="file"
+          id="fileInput"
+          name="file"
+          aria-required="true"
+          aria-describedby="fileHelp"
+        />
+
+        <label for="dirNameInput">Directory Name to Upload</label>
+        <input
+          type="text"
+          id="dirNameInput"
+          name="dirname"
+          aria-required="true"
+          aria-describedby="fileHelp"
+        />
+        <div
+          id="fileHelp"
+          style="
+            font-size: 0.8rem;
+            margin-top: 4px;
+            margin-bottom: 2px;
+            color: #aaa;
+          "
+        >
+          Supported file types depend on the server.
+        </div>
+
+        <button type="submit" id="submitBtn" disabled>Send File</button>
+      </form>
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+    </main>
+
+    <script>
+      (() => {
+        const form = document.getElementById("uploadForm");
+        const fileInput = document.getElementById("fileInput");
+        const dirNameInput = document.getElementById("dirNameInput");
+        const submitBtn = document.getElementById("submitBtn");
+        const status = document.getElementById("status");
+
+        // Chunk size: 1 MiB
+        const CHUNK_SIZE = 1024 * 1024; // 1 MB
+
+        // Enable submit only if a file is selected
+        fileInput.addEventListener("change", () => {
+          submitBtn.disabled = fileInput.files.length === 0;
+          status.textContent = "";
+          status.className = "status";
+        });
+
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault(); // Prevent default form submission
+
+          try {
+            if (!fileInput.files.length) {
+              status.textContent = "Please select a file before uploading.";
+              status.className = "status error";
+              return;
+            }
+
+            const file = fileInput.files[0];
+            const fileSize = file.size;
+            const dirName = dirNameInput.value;
+            console.log(dirName, "dirname");
+
+            submitBtn.disabled = true;
+            status.textContent = "Uploading...0%";
+            status.className = "status";
+
+            const formData = new FormData();
+            formData.append("fileName", file.name);
+            formData.append("dirName", dirName);
+
+            if (fileSize <= CHUNK_SIZE) {
+              const uploadId = generateUploadId();
+              formData.append("uploadId", uploadId);
+              formData.append("file", file);
+              const response = await fetch(
+                "http://127.0.0.1:5000/api/v0/database/upload",
+                {
+                  method: "POST",
+                  body: formData,
+                }
+              );
+
+              if (!response.ok) {
+                const text = await response.text();
+                throw new Error(text || "Server error during upload.");
+              }
+
+              const result = await response.json();
+              status.textContent = `${result.message}`;
+              status.className = "status success";
+            } else {
+              // Handle chunked upload
+              const totalChunkNumber = Math.ceil(fileSize / CHUNK_SIZE);
+              let chunkNumber = 0;
+
+              const uploadId = generateUploadId();
+              formData.append("uploadId", uploadId);
+
+              while (chunkNumber < totalChunkNumber) {
+                const start = chunkNumber * CHUNK_SIZE;
+                const end = Math.min(start + CHUNK_SIZE, fileSize);
+                const partFile = file.slice(start, end);
+
+                const chunkFormData = new FormData();
+                chunkFormData.append("uploadId", uploadId);
+                chunkFormData.append("chunkSize", partFile.size);
+                chunkFormData.append("dirName", dirName);
+                chunkFormData.append("deliveredChunks", end);
+                chunkFormData.append("file", partFile);
+                chunkFormData.append("contentLength", fileSize);
+                chunkFormData.append("originalName", file.name);
+                chunkFormData.append("type", file.type);
+                chunkFormData.append(
+                  "status",
+                  chunkNumber === totalChunkNumber - 1 ? "success" : "pending"
+                );
+
+                const response = await fetch(
+                  "http://127.0.0.1:5000/api/v0/database/upload",
+                  {
+                    method: "POST",
+                    body: chunkFormData,
+                  }
+                );
+
+                if (!response.ok) {
+                  const text = await response.text();
+                  throw new Error(text || "Server error during upload.");
+                }
+
+                const result = await response.json();
+                if (result.status === "pending") {
+                  status.textContent = `Uploading...${result.data.percent}%`;
+                } else {
+                  status.textContent = `${result.message}`;
+                  status.className = "status success";
+                }
+
+                chunkNumber++;
+              }
+            }
+
+            // Reset form and status after upload
+            fileInput.value = ""; // Clear the file input
+            dirNameInput.value = ""; // Clear the directory input
+            submitBtn.disabled = true; // Disable the submit button
+            status.textContent = ""; // Clear the status message
+          } catch (error) {
+            status.textContent = "Upload failed: " + error.message;
+            status.className = "status error";
+          }
+        });
+
+        function generateUploadId() {
+          return (
+            "upload-" + Math.random().toString(36).substring(2, 10) + Date.now()
+          );
+        }
+      })();
+    </script>
+  </body>
+</html>
