@@ -4,7 +4,6 @@ const path = require("path");
 const Database = require("./../utils/DBStorage.js");
 const ObjectId = require("./../utils/ObjectId.js");
 const CustomError = require("./../utils/CustomError.js");
-// const JWT = require("./../utils/JWT.js");
 
 const database = new Database();
 const objectId = new ObjectId();

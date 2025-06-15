@@ -3,14 +3,94 @@ const path = require("path");
 
 const ObjectId = require("./ObjectId.js");
 const CustomError = require("./CustomError.js");
-const { error } = require("console");
+const JWT = require("./JWT.js");
 const objectId = new ObjectId();
+const jwt = new JWT();
 
 class DBStorage {
   constructor() {
     this.__rootPath = path.join(__dirname, "./../database");
     this.isConnected = null;
     this.init(process.env.DB_USERID);
+  }
+
+  async getDirectoriesFromRoot() {
+    const results = [];
+    Object.entries(objectId.getObjectIdData()).forEach(([objId, token]) => {
+      const { filename, dirPath, createdAt, dirname } = jwt.verify(token);
+      if (dirPath) {
+        const data = {
+          filename: filename,
+          dirPath,
+          objectId: objId,
+          createdAt,
+        };
+        results.push(data);
+      }
+      if (dirname) {
+        const folder = dirname.split("/").at(-1); // last index value
+        const data = {
+          folderName: folder,
+          dirName: dirname,
+          objectId: objId,
+          createdAt,
+        };
+        results.push(data);
+      }
+    });
+
+    return results;
+  }
+
+  async getDirectoriesWithDirId(dirnameId) {
+    if (!objectId.exists(dirnameId)) {
+      const error = new CustomError({
+        status: "fail",
+        statusCode: 400,
+        message: "no directory",
+      });
+      throw error;
+    }
+    const token = objectId.getObjectIdData()[dirnameId];
+    const { dirname: targetDirname } = jwt.verify(token);
+    if (!targetDirname) {
+      const error = new CustomError({
+        status: "fail",
+        statusCode: 400,
+        message: "this is file ,not a directory",
+      });
+      throw error;
+    }
+
+    const results = [];
+    Object.entries(objectId.getObjectIdData()).forEach(([objId, token]) => {
+      const { filename, dirPath, createdAt, dirname } = jwt.verify(token);
+      if (dirPath && dirPath === targetDirname) {
+        const data = {
+          filename: filename,
+          dirPath,
+          objectId: objId,
+          createdAt,
+        };
+        results.push(data);
+      }
+      if (
+        dirname &&
+        dirname.includes(targetDirname) &&
+        dirname !== targetDirname
+      ) {
+        const folder = dirname.split(targetDirname)[1].split("/")[1];
+        const data = {
+          folderName: folder,
+          dirName: dirname,
+          objectId: objId,
+          createdAt,
+        };
+        results.push(data);
+      }
+    });
+
+    return results;
   }
 
   async createFolder(dirPath) {
@@ -61,7 +141,6 @@ class DBStorage {
         });
       }
       const uuid = objectId.getObjectIdByDirname(dirPath);
-
       const finalDestinationPath =
         objectId.getFinalDestinationWithObjectId(dirPath);
 
@@ -70,14 +149,6 @@ class DBStorage {
     } catch (err) {
       console.log(err.message);
       throw err;
-    }
-  }
-
-  async upload(file) {
-    try {
-    } catch (error) {
-      console.log(error.message);
-      throw error;
     }
   }
 

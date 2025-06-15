@@ -233,7 +233,7 @@
               formData.append("uploadId", uploadId);
               formData.append("file", file);
               const response = await fetch(
-                "http://127.0.0.1:5000/api/v0/database/upload",
+                "http://127.0.0.1:5000/api/v0/directory/upload",
                 {
                   method: "POST",
                   body: formData,
@@ -276,7 +276,7 @@
                 );
 
                 const response = await fetch(
-                  "http://127.0.0.1:5000/api/v0/database/upload",
+                  "http://127.0.0.1:5000/api/v0/directory/upload",
                   {
                     method: "POST",
                     body: chunkFormData,

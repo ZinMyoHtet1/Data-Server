@@ -25,13 +25,19 @@ class ObjectId {
     }
   }
 
-  dirnameExists(dirnameToCreate) {
+  getObjectIdData() {
+    return this.__objectIdFile[this.userId];
+  }
+
+  isDirectory() {}
+
+  dirnameExists(dirnameToCheck) {
     const tokens = Object.values(this.__objectIdFile[this.userId]);
     if (tokens.length <= 0) return false;
     for (const token of tokens) {
       //dirname / userId
       const { dirname } = jwt.verify(token);
-      if (dirname && dirnameToCreate === dirname) return true;
+      if (dirname && dirnameToCheck === dirname) return true;
     }
     return false;
   }
@@ -155,11 +161,7 @@ class ObjectId {
   }
 
   exists(objectId) {
-    const index = JSON.stringify(this.__objectIdFile[this.userId]).indexOf(
-      objectId
-    );
-    if (!index === -1) return true;
-    return false;
+    return JSON.stringify(this.__objectIdFile[this.userId]).includes(objectId);
   }
 
   async addObjectId(objectId, payload) {
